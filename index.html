@@ -29,8 +29,8 @@
       </nav>
 
       <div class="sidebar-note">
-        <strong>Demo Modus</strong>
-        <p>Die Kennzahlen sind aktuell Testdaten. Im nächsten Schritt verbinden wir eine Marktdaten API.</p>
+        <strong>Marktdaten</strong>
+        <p>Beim Start werden die zuletzt automatisch aktualisierten Marktdaten geladen. Falls sie nicht verfügbar sind, bleibt die Demo-Version als Fallback aktiv.</p>
       </div>
     </aside>
 
@@ -41,7 +41,7 @@
           <h1 id="pageTitle">Dashboard</h1>
         </div>
         <div class="topbar-actions">
-          <span class="status-pill"><span class="status-dot"></span>Demo Daten</span>
+          <span class="status-pill"><span class="status-dot"></span>Marktdaten werden geladen…</span>
           <button id="resetData" class="secondary-button" type="button">Lokale Auswahl zurücksetzen</button>
         </div>
       </header>
@@ -175,7 +175,6 @@
   </div>
 
   <script src="data.js"></script>
-  <script src="app.js"></script>
-  <script src="help.js"></script>
+  <script src="market-loader.js"></script>
 </body>
 </html>
