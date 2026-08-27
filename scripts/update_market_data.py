@@ -8,6 +8,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+from catalog_discovery import discover_from_catalog
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT / "market-config.json"
@@ -75,6 +76,25 @@ def resolve_symbol(item, cached_symbol=None):
             except Exception:
                 pass
 
+    ticker = item.get("catalogTicker")
+    if ticker:
+        ticker = str(ticker).strip()
+        ticker_candidates = []
+        if "." in ticker:
+            ticker_candidates.append(ticker)
+        ticker_candidates.extend([ticker + suffix for suffix in EUROPE_SUFFIXES])
+        ticker_candidates.append(ticker)
+        for candidate in ticker_candidates:
+            try:
+                candidate_result = chart(candidate, "1mo", "1d")
+                meta = candidate_result.get("meta", {})
+                instrument = str(meta.get("instrumentType") or "").upper()
+                if instrument and instrument not in {"ETF", "MUTUALFUND"}:
+                    continue
+                return candidate
+            except Exception:
+                continue
+
     candidates = []
     queries = []
     if item.get("isin"):
@@ -136,6 +156,8 @@ def discover_etfs(config, previous_payload):
     discovery = config.get("discovery") or {}
     if not discovery.get("enabled", False):
         return []
+    if discovery.get("catalogSource", "etfdb") == "etfdb":
+        return discover_from_catalog(config, previous_payload)
 
     target_total = int(discovery.get("targetTotal", 100))
     base_count = len(config.get("etfs", []))
@@ -407,6 +429,9 @@ def build_item(config_item, cached_symbol=None):
         "provider": config_item.get("provider"),
         "ter": config_item.get("ter"),
         "autoDiscovered": bool(config_item.get("autoDiscovered")),
+        "catalogTicker": config_item.get("catalogTicker"),
+        "size": config_item.get("size"),
+        "index": config_item.get("index"),
         "yahooSymbol": symbol,
         "price": round_or_none(current_price),
         "currency": meta.get("currency"),
