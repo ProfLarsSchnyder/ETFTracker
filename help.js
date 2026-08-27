@@ -27,14 +27,13 @@ function annotateHelp() {
   const topScore = document.getElementById("topOpportunityScore");
   if (topScore) addHelp(topScore, ETF_HELP.score);
 
-  document.querySelectorAll(".trend-badge").forEach((el) => {
-    const key = el.textContent.trim();
-    addHelp(el, ETF_HELP[key]);
-  });
-
-  document.querySelectorAll(".compact-name span").forEach((el) => {
+  document.querySelectorAll(".trend-badge, .compact-name span, td").forEach((el) => {
     const key = el.textContent.trim();
     if (ETF_HELP[key]) addHelp(el, ETF_HELP[key]);
+  });
+
+  document.querySelectorAll(".compact-row .metric, td").forEach((el) => {
+    if (/\b\d{1,3}\s*\/\s*100\b/.test(el.textContent.trim())) addHelp(el, ETF_HELP.score);
   });
 
   document.querySelectorAll("th, .card-metric span, td:first-child strong").forEach((el) => {
