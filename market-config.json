@@ -1,6 +1,6 @@
 {
   "source": "Yahoo Finance chart/search endpoints",
-  "note": "Kostenlose keyless Kursquelle für persönliches Research. 15 ETFs sind kuratiert, weitere UCITS ETFs werden automatisch aus europäischen Yahoo-Listings entdeckt.",
+  "note": "Kostenlose keyless Kursquelle für persönliches Research. 15 ETFs sind kuratiert, weitere UCITS ETFs werden automatisch aus einem öffentlichen europäischen ETF-Katalog ausgewählt und über Yahoo-Finance-Listings mit Kursdaten ergänzt.",
   "etfs": [
     {"id":"world","isin":"IE00B4L5Y983","name":"iShares Core MSCI World UCITS ETF USD (Acc)","displaySymbol":"SWDA","category":"Welt Aktien","provider":"iShares","ter":0.20,"yahooSymbol":"EUNL.DE"},
     {"id":"emimi","isin":"IE00BKM4GZ66","name":"iShares Core MSCI EM IMI UCITS ETF USD (Acc)","displaySymbol":"EIMI","category":"Emerging Markets","provider":"iShares","ter":0.18,"yahooSymbol":"EMIM.AS"},
@@ -20,7 +20,7 @@
   ],
   "discovery": {
     "enabled": true,
-    "targetTotal": 100,
+    "targetTotal": 200,
     "quotesPerQuery": 20,
     "queries": [
       {"query":"UCITS ETF MSCI World","category":"Welt Aktien"},
