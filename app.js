@@ -62,6 +62,7 @@ function formatHistoryPct(value) {
 }
 
 function formatNumber(value, digits = 2) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "–";
   return new Intl.NumberFormat("de-CH", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits
@@ -160,7 +161,9 @@ function calculateOpportunityScore(etf) {
     threeYearPoints = etf.perf3y > 20 ? 3 : etf.perf3y > 0 ? 2 : 0;
   }
 
-  const terPoints = etf.ter <= 0.25 ? 3 : etf.ter <= 0.45 ? 2 : etf.ter <= 0.65 ? 1 : 0;
+  const terPoints = etf.ter === null || etf.ter === undefined
+    ? 1.5
+    : etf.ter <= 0.25 ? 3 : etf.ter <= 0.45 ? 2 : etf.ter <= 0.65 ? 1 : 0;
   const stability = clamp(fiveYearPoints + threeYearPoints + terPoints, 0, 10);
 
   const components = [
@@ -204,7 +207,7 @@ function calculateOpportunityScore(etf) {
       label: "Langfristige Stabilität",
       score: round1(stability),
       max: 10,
-      explanation: `Berücksichtigt 3J (${formatHistoryPct(etf.perf3y)}), 5J (${formatHistoryPct(etf.perf5y)}) und TER (${formatNumber(etf.ter)} %). Bei jungen ETFs wird fehlende Historie neutral behandelt.`
+      explanation: `Berücksichtigt 3J (${formatHistoryPct(etf.perf3y)}), 5J (${formatHistoryPct(etf.perf5y)}) und TER (${etf.ter === null || etf.ter === undefined ? "nicht verfügbar" : `${formatNumber(etf.ter)} %`}). Fehlende TER oder junge Historie werden im Score neutral behandelt.`
     }
   ];
 
@@ -357,7 +360,7 @@ function renderFavorites() {
             ${performanceCell(etf.perf1y)}
             ${historyPerformanceCell(etf.perf3y)}
             ${historyPerformanceCell(etf.perf5y)}
-            <td>${formatNumber(etf.ter)} %</td>
+            <td>${etf.ter === null || etf.ter === undefined ? "–" : `${formatNumber(etf.ter)} %`}</td>
             <td class="${performanceClass(getDistanceFromHigh(etf))}">${formatPct(getDistanceFromHigh(etf))}</td>
             <td><strong>${etf.score}</strong>/100</td>
           </tr>`).join("")}
@@ -376,11 +379,22 @@ function historyPerformanceCell(value) {
 function renderRadar() {
   const category = document.getElementById("categoryFilter")?.value || "all";
   const trend = document.getElementById("trendFilter")?.value || "all";
+  const query = (document.getElementById("radarSearch")?.value || "").trim().toLowerCase();
+  const sortBy = document.getElementById("radarSort")?.value || "score";
 
   const filtered = ETF_DATA
     .filter((etf) => category === "all" || etf.category === category)
     .filter((etf) => trend === "all" || etf.trend === trend)
-    .sort((a, b) => b.score - a.score);
+    .filter((etf) => !query || [etf.name, etf.symbol, etf.isin, etf.category, etf.provider]
+      .filter(Boolean)
+      .some((field) => String(field).toLowerCase().includes(query)))
+    .sort((a, b) => {
+      if (sortBy === "perf1y") return (b.perf1y ?? -9999) - (a.perf1y ?? -9999);
+      if (sortBy === "perf3m") return (b.perf3m ?? -9999) - (a.perf3m ?? -9999);
+      if (sortBy === "distanceHigh") return getDistanceFromHigh(b) - getDistanceFromHigh(a);
+      if (sortBy === "volatility") return (a.volatility ?? 9999) - (b.volatility ?? 9999);
+      return b.score - a.score;
+    });
 
   const container = document.getElementById("radarGrid");
   container.innerHTML = filtered.length
@@ -436,7 +450,7 @@ function radarCard(etf) {
         </div>
         <div class="card-metric">
           <span>TER</span>
-          <strong>${formatNumber(etf.ter)} %</strong>
+          <strong>${etf.ter === null || etf.ter === undefined ? "–" : `${formatNumber(etf.ter)} %`}</strong>
         </div>
       </div>
 
@@ -493,7 +507,7 @@ function renderCompare() {
     ["Kategorie", (e) => e.category],
     ["Opportunity Score", (e) => `${e.score}/100`],
     ["Trendphase", (e) => e.trend],
-    ["TER", (e) => `${formatNumber(e.ter)} %`],
+    ["TER", (e) => e.ter === null || e.ter === undefined ? "–" : `${formatNumber(e.ter)} %`],
     ["Heute", (e) => formatPct(e.perfDay)],
     ["1 Woche", (e) => formatPct(e.perfWeek)],
     ["3 Monate", (e) => formatPct(e.perf3m)],
@@ -571,6 +585,8 @@ function bindEvents() {
   document.getElementById("favoriteSearch")?.addEventListener("input", renderFavorites);
   document.getElementById("categoryFilter")?.addEventListener("change", renderRadar);
   document.getElementById("trendFilter")?.addEventListener("change", renderRadar);
+  document.getElementById("radarSearch")?.addEventListener("input", renderRadar);
+  document.getElementById("radarSort")?.addEventListener("change", renderRadar);
 
   document.body.addEventListener("click", (event) => {
     const actionButton = event.target.closest("[data-action]");

@@ -128,6 +128,7 @@
             <p class="muted">Sortiert ETFs nach unserem Opportunity Score.</p>
           </div>
           <div class="toolbar-controls">
+            <input id="radarSearch" type="search" placeholder="ETF, Ticker oder Thema suchen" aria-label="ETF Radar durchsuchen" />
             <select id="categoryFilter" aria-label="Kategorie filtern">
               <option value="all">Alle Kategorien</option>
             </select>
@@ -137,6 +138,13 @@
               <option value="Mid Trend">Mid Trend</option>
               <option value="Extended">Extended</option>
               <option value="Weak">Weak</option>
+            </select>
+            <select id="radarSort" aria-label="ETF Radar sortieren">
+              <option value="score">Sortieren: Opportunity Score</option>
+              <option value="perf3m">Sortieren: 3 Monate</option>
+              <option value="perf1y">Sortieren: 1 Jahr</option>
+              <option value="distanceHigh">Sortieren: Nähe zum 52W Hoch</option>
+              <option value="volatility">Sortieren: niedrige Volatilität</option>
             </select>
           </div>
         </div>
