@@ -34,10 +34,31 @@ function getEtf(id) {
   return ETF_DATA.find((etf) => etf.id === id);
 }
 
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function scale(value, min, max) {
+  if (max === min) return 0;
+  return clamp((value - min) / (max - min), 0, 1);
+}
+
+function round1(value) {
+  return Math.round(value * 10) / 10;
+}
+
 function formatPct(value) {
   if (value === null || value === undefined || Number.isNaN(value)) return "–";
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(2)} %`;
+}
+
+function hasHistory(value) {
+  return typeof value === "number" && Number.isFinite(value) && value !== 0;
+}
+
+function formatHistoryPct(value) {
+  return hasHistory(value) ? formatPct(value) : "–";
 }
 
 function formatNumber(value, digits = 2) {
@@ -59,6 +80,168 @@ function getDistanceFromHigh(etf) {
 
 function getDistanceFromSma200(etf) {
   return ((etf.price / etf.sma200) - 1) * 100;
+}
+
+function calculateOpportunityScore(etf) {
+  const distanceHigh = getDistanceFromHigh(etf);
+  const distanceSma200 = getDistanceFromSma200(etf);
+
+  const phaseBase = {
+    "Mid Trend": 15,
+    "Early Trend": 11,
+    Extended: 10,
+    Weak: 3
+  }[etf.trend] ?? 7;
+
+  const trendQuality = clamp(
+    phaseBase
+      + (etf.price > etf.sma200 ? 5 : 0)
+      + (etf.price > etf.sma50 ? 3 : 0)
+      + (etf.sma50 > etf.sma200 ? 2 : 0),
+    0,
+    25
+  );
+
+  const momentum =
+    scale(etf.perfMonth, -5, 10) * 5
+    + scale(etf.perf3m, -10, 25) * 6
+    + scale(etf.perf6m, -15, 40) * 5
+    + scale(etf.perf1y, -20, 60) * 4;
+
+  let highEntry = 0;
+  if (distanceHigh <= -35) highEntry = 4;
+  else if (distanceHigh <= -20) highEntry = 8;
+  else if (distanceHigh <= -5) highEntry = 10;
+  else if (distanceHigh <= 0) highEntry = 7;
+  else highEntry = 3;
+
+  let smaEntry = 0;
+  if (distanceSma200 >= -5 && distanceSma200 <= 12) smaEntry = 10;
+  else if (distanceSma200 > 12 && distanceSma200 <= 25) smaEntry = 7;
+  else if (distanceSma200 > 25 && distanceSma200 <= 40) smaEntry = 4;
+  else if (distanceSma200 > 40) smaEntry = 1;
+  else smaEntry = 5;
+
+  const entrySituation = highEntry + smaEntry;
+
+  let volatilityPoints = 1;
+  if (etf.volatility <= 15) volatilityPoints = 8;
+  else if (etf.volatility <= 22) volatilityPoints = 6;
+  else if (etf.volatility <= 30) volatilityPoints = 4;
+  else if (etf.volatility <= 38) volatilityPoints = 2;
+
+  let drawdownPoints = 1;
+  if (etf.maxDrawdown >= -25) drawdownPoints = 7;
+  else if (etf.maxDrawdown >= -35) drawdownPoints = 5;
+  else if (etf.maxDrawdown >= -50) drawdownPoints = 3;
+
+  const risk = volatilityPoints + drawdownPoints;
+
+  const m1 = etf.perfMonth;
+  const m3 = etf.perf3m / 3;
+  const m6 = etf.perf6m / 6;
+  const m12 = etf.perf1y / 12;
+  const acceleration = clamp(
+    (m1 > m3 ? 4 : m1 > 0 ? 2 : 0)
+      + (m3 > m6 ? 3 : m3 > 0 ? 1 : 0)
+      + (m6 > m12 ? 2 : m6 > 0 ? 1 : 0)
+      + (etf.perfMonth > 0 && etf.perf3m > 0 ? 1 : 0),
+    0,
+    10
+  );
+
+  let fiveYearPoints = 2;
+  if (hasHistory(etf.perf5y)) {
+    fiveYearPoints = etf.perf5y > 30 ? 4 : etf.perf5y > 0 ? 3 : 1;
+  }
+
+  let threeYearPoints = 1.5;
+  if (hasHistory(etf.perf3y)) {
+    threeYearPoints = etf.perf3y > 20 ? 3 : etf.perf3y > 0 ? 2 : 0;
+  }
+
+  const terPoints = etf.ter <= 0.25 ? 3 : etf.ter <= 0.45 ? 2 : etf.ter <= 0.65 ? 1 : 0;
+  const stability = clamp(fiveYearPoints + threeYearPoints + terPoints, 0, 10);
+
+  const components = [
+    {
+      key: "trend",
+      label: "Trendqualität",
+      score: round1(trendQuality),
+      max: 25,
+      explanation: `${etf.trend}, Kurs ${distanceSma200 >= 0 ? "über" : "unter"} SMA 200, ${etf.sma50 > etf.sma200 ? "SMA 50 über SMA 200" : "SMA 50 nicht über SMA 200"}.`
+    },
+    {
+      key: "momentum",
+      label: "Momentum",
+      score: round1(momentum),
+      max: 20,
+      explanation: `Bewertet 1, 3, 6 und 12 Monate. Aktuell: ${formatPct(etf.perfMonth)}, ${formatPct(etf.perf3m)}, ${formatPct(etf.perf6m)}, ${formatPct(etf.perf1y)}.`
+    },
+    {
+      key: "entry",
+      label: "Einstiegssituation",
+      score: round1(entrySituation),
+      max: 20,
+      explanation: `${formatPct(distanceHigh)} zum 52W Hoch und ${formatPct(distanceSma200)} zum SMA 200. Zu starke Überdehnung wird abgewertet.`
+    },
+    {
+      key: "risk",
+      label: "Risiko",
+      score: round1(risk),
+      max: 15,
+      explanation: `Volatilität ${formatNumber(etf.volatility, 1)} %, maximaler Drawdown ${formatPct(etf.maxDrawdown)}. Niedrigere Schwankungen erhalten mehr Punkte.`
+    },
+    {
+      key: "acceleration",
+      label: "Trendbeschleunigung",
+      score: round1(acceleration),
+      max: 10,
+      explanation: "Vergleicht das jüngste Momentum mit den längeren Zeiträumen. Beschleunigendes Momentum erhält mehr Punkte."
+    },
+    {
+      key: "stability",
+      label: "Langfristige Stabilität",
+      score: round1(stability),
+      max: 10,
+      explanation: `Berücksichtigt 3J (${formatHistoryPct(etf.perf3y)}), 5J (${formatHistoryPct(etf.perf5y)}) und TER (${formatNumber(etf.ter)} %). Bei jungen ETFs wird fehlende Historie neutral behandelt.`
+    }
+  ];
+
+  const total = Math.round(components.reduce((sum, component) => sum + component.score, 0));
+  return { total: clamp(total, 0, 100), components };
+}
+
+ETF_DATA.forEach((etf) => {
+  const result = calculateOpportunityScore(etf);
+  etf.score = result.total;
+  etf.scoreBreakdown = result.components;
+});
+
+function scoreBreakdownMarkup(etf) {
+  const components = etf.scoreBreakdown || [];
+  return `
+    <details class="score-details">
+      <summary>Warum ${etf.score}/100?</summary>
+      <div class="score-breakdown">
+        ${components.map((component) => `
+          <div class="score-component">
+            <div class="score-component-head">
+              <strong>${component.label}</strong>
+              <span>${formatNumber(component.score, 1)}/${component.max}</span>
+            </div>
+            <div class="score-bar" aria-hidden="true">
+              <span style="width:${clamp((component.score / component.max) * 100, 0, 100)}%"></span>
+            </div>
+            <p>${component.explanation}</p>
+          </div>`).join("")}
+        <div class="score-total-row">
+          <strong>Gesamt</strong>
+          <strong>${etf.score}/100</strong>
+        </div>
+        <p class="score-note">Der Score ist eine quantitative Orientierung, kein Kaufsignal. Die Gewichtung ist aktuell: Trend 25, Momentum 20, Einstieg 20, Risiko 15, Beschleunigung 10, langfristige Stabilität 10 Punkte.</p>
+      </div>
+    </details>`;
 }
 
 function switchView(viewId) {
@@ -151,6 +334,8 @@ function renderFavorites() {
           <th>3 Monate</th>
           <th>YTD</th>
           <th>1 Jahr</th>
+          <th>3 Jahre</th>
+          <th>5 Jahre</th>
           <th>TER</th>
           <th>52W Hoch</th>
           <th>Score</th>
@@ -170,6 +355,8 @@ function renderFavorites() {
             ${performanceCell(etf.perf3m)}
             ${performanceCell(etf.perfYtd)}
             ${performanceCell(etf.perf1y)}
+            ${historyPerformanceCell(etf.perf3y)}
+            ${historyPerformanceCell(etf.perf5y)}
             <td>${formatNumber(etf.ter)} %</td>
             <td class="${performanceClass(getDistanceFromHigh(etf))}">${formatPct(getDistanceFromHigh(etf))}</td>
             <td><strong>${etf.score}</strong>/100</td>
@@ -180,6 +367,10 @@ function renderFavorites() {
 
 function performanceCell(value) {
   return `<td class="${performanceClass(value)}">${formatPct(value)}</td>`;
+}
+
+function historyPerformanceCell(value) {
+  return `<td class="${hasHistory(value) ? performanceClass(value) : ""}">${formatHistoryPct(value)}</td>`;
 }
 
 function renderRadar() {
@@ -224,6 +415,14 @@ function radarCard(etf) {
           <strong class="${performanceClass(etf.perf1y)}">${formatPct(etf.perf1y)}</strong>
         </div>
         <div class="card-metric">
+          <span>3 Jahre</span>
+          <strong class="${hasHistory(etf.perf3y) ? performanceClass(etf.perf3y) : ""}">${formatHistoryPct(etf.perf3y)}</strong>
+        </div>
+        <div class="card-metric">
+          <span>5 Jahre</span>
+          <strong class="${hasHistory(etf.perf5y) ? performanceClass(etf.perf5y) : ""}">${formatHistoryPct(etf.perf5y)}</strong>
+        </div>
+        <div class="card-metric">
           <span>Abstand 52W Hoch</span>
           <strong class="${performanceClass(distanceHigh)}">${formatPct(distanceHigh)}</strong>
         </div>
@@ -242,6 +441,7 @@ function radarCard(etf) {
       </div>
 
       <p class="muted">${etf.reason}</p>
+      ${scoreBreakdownMarkup(etf)}
 
       <div class="card-actions">
         <button type="button" class="${isFavorite ? "active" : ""}" data-action="favorite" data-id="${etf.id}">${isFavorite ? "✓ Meine ETFs" : "+ Meine ETFs"}</button>
@@ -298,7 +498,14 @@ function renderCompare() {
     ["1 Woche", (e) => formatPct(e.perfWeek)],
     ["3 Monate", (e) => formatPct(e.perf3m)],
     ["1 Jahr", (e) => formatPct(e.perf1y)],
-    ["3 Jahre", (e) => e.perf3y ? formatPct(e.perf3y) : "–"],
+    ["3 Jahre", (e) => formatHistoryPct(e.perf3y)],
+    ["5 Jahre", (e) => formatHistoryPct(e.perf5y)],
+    ["Trendqualität", (e) => `${formatNumber(e.scoreBreakdown.find((c) => c.key === "trend")?.score || 0, 1)}/25`],
+    ["Momentum", (e) => `${formatNumber(e.scoreBreakdown.find((c) => c.key === "momentum")?.score || 0, 1)}/20`],
+    ["Einstiegssituation", (e) => `${formatNumber(e.scoreBreakdown.find((c) => c.key === "entry")?.score || 0, 1)}/20`],
+    ["Risiko Score", (e) => `${formatNumber(e.scoreBreakdown.find((c) => c.key === "risk")?.score || 0, 1)}/15`],
+    ["Trendbeschleunigung", (e) => `${formatNumber(e.scoreBreakdown.find((c) => c.key === "acceleration")?.score || 0, 1)}/10`],
+    ["Langfristige Stabilität", (e) => `${formatNumber(e.scoreBreakdown.find((c) => c.key === "stability")?.score || 0, 1)}/10`],
     ["Volatilität", (e) => `${formatNumber(e.volatility, 1)} %`],
     ["Max. Drawdown", (e) => formatPct(e.maxDrawdown)],
     ["Abstand 52W Hoch", (e) => formatPct(getDistanceFromHigh(e))],
