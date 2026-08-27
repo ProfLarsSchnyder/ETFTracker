@@ -1,6 +1,6 @@
 name: Update ETF market data
 
-# The workflow also refreshes the automatically discovered UCITS ETF universe.
+# Refreshes live metrics for the curated ETFs plus the automatically selected European UCITS universe.
 on:
   workflow_dispatch:
   push:
