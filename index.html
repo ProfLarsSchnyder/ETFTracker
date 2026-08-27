@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="ETF Tracker mit Favoriten, ETF Radar, Watchlist und Vergleich." />
+  <title>ETF Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">ET</div>
+        <div>
+          <strong>ETF Tracker</strong>
+          <span>Research Dashboard</span>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Hauptnavigation">
+        <button class="nav-item active" data-view="dashboard">Dashboard</button>
+        <button class="nav-item" data-view="favorites">Meine ETFs</button>
+        <button class="nav-item" data-view="radar">ETF Radar</button>
+        <button class="nav-item" data-view="watchlist">Watchlist</button>
+        <button class="nav-item" data-view="compare">Vergleich</button>
+      </nav>
+
+      <div class="sidebar-note">
+        <strong>Demo Modus</strong>
+        <p>Die Kennzahlen sind aktuell Testdaten. Im nächsten Schritt verbinden wir eine Marktdaten API.</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">ETF Analyse</p>
+          <h1 id="pageTitle">Dashboard</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="status-pill"><span class="status-dot"></span>Demo Daten</span>
+          <button id="resetData" class="secondary-button" type="button">Lokale Auswahl zurücksetzen</button>
+        </div>
+      </header>
+
+      <section id="dashboard" class="view active-view">
+        <div class="hero-grid">
+          <article class="hero-card">
+            <span class="card-label">Favoriten</span>
+            <strong id="favoriteCount" class="hero-number">0</strong>
+            <span class="muted">ETFs in deiner persönlichen Übersicht</span>
+          </article>
+          <article class="hero-card">
+            <span class="card-label">Watchlist</span>
+            <strong id="watchlistCount" class="hero-number">0</strong>
+            <span class="muted">ETFs, die du beobachten möchtest</span>
+          </article>
+          <article class="hero-card accent-card">
+            <span class="card-label">Top Opportunity</span>
+            <strong id="topOpportunityName" class="hero-number small">–</strong>
+            <span id="topOpportunityScore" class="muted">Score wird berechnet</span>
+          </article>
+        </div>
+
+        <div class="section-grid two-cols">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Schnellüberblick</p>
+                <h2>Meine ETFs</h2>
+              </div>
+              <button class="text-button" type="button" data-jump="favorites">Alle anzeigen</button>
+            </div>
+            <div id="dashboardFavorites" class="compact-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Radar</p>
+                <h2>Interessante Kandidaten</h2>
+              </div>
+              <button class="text-button" type="button" data-jump="radar">Radar öffnen</button>
+            </div>
+            <div id="dashboardRadar" class="compact-list"></div>
+          </section>
+        </div>
+
+        <section class="panel insight-panel">
+          <div>
+            <p class="eyebrow">Prinzip</p>
+            <h2>Was der Opportunity Score sucht</h2>
+          </div>
+          <div class="score-explainer">
+            <span>Trendqualität</span>
+            <span>Momentum</span>
+            <span>Einstiegssituation</span>
+            <span>Risiko</span>
+            <span>Trendbeschleunigung</span>
+            <span>Langfristige Stabilität</span>
+          </div>
+          <p class="muted">Der Score ist kein Kaufsignal. Er soll ETFs hervorheben, die quantitativ interessant wirken, ohne nur die stärkste vergangene Rendite zu belohnen.</p>
+        </section>
+      </section>
+
+      <section id="favorites" class="view">
+        <div class="section-toolbar">
+          <div>
+            <p class="eyebrow">Persönliche Übersicht</p>
+            <h2>Meine ETFs</h2>
+            <p class="muted">Nur Favoriten und Marktperformance, keine Stückzahlen und keine privaten Vermögenswerte.</p>
+          </div>
+          <div class="toolbar-controls">
+            <input id="favoriteSearch" type="search" placeholder="ETF suchen" aria-label="Favoriten durchsuchen" />
+          </div>
+        </div>
+        <div id="favoritesTable" class="table-wrap"></div>
+      </section>
+
+      <section id="radar" class="view">
+        <div class="section-toolbar">
+          <div>
+            <p class="eyebrow">Quantitative Analyse</p>
+            <h2>ETF Radar</h2>
+            <p class="muted">Sortiert ETFs nach unserem Opportunity Score.</p>
+          </div>
+          <div class="toolbar-controls">
+            <select id="categoryFilter" aria-label="Kategorie filtern">
+              <option value="all">Alle Kategorien</option>
+            </select>
+            <select id="trendFilter" aria-label="Trendphase filtern">
+              <option value="all">Alle Trendphasen</option>
+              <option value="Early Trend">Early Trend</option>
+              <option value="Mid Trend">Mid Trend</option>
+              <option value="Extended">Extended</option>
+              <option value="Weak">Weak</option>
+            </select>
+          </div>
+        </div>
+        <div id="radarGrid" class="radar-grid"></div>
+      </section>
+
+      <section id="watchlist" class="view">
+        <div class="section-toolbar">
+          <div>
+            <p class="eyebrow">Beobachten</p>
+            <h2>Watchlist</h2>
+            <p class="muted">ETFs, die interessant sind, aber noch nicht zu deinen Favoriten gehören.</p>
+          </div>
+        </div>
+        <div id="watchlistGrid" class="radar-grid"></div>
+      </section>
+
+      <section id="compare" class="view">
+        <div class="section-toolbar">
+          <div>
+            <p class="eyebrow">Direktvergleich</p>
+            <h2>ETF Vergleich</h2>
+            <p class="muted">Wähle bis zu vier ETFs und vergleiche Rendite, Risiko, Kosten und Opportunity Score.</p>
+          </div>
+        </div>
+
+        <div class="compare-controls">
+          <select id="compareSelect" aria-label="ETF für Vergleich auswählen"></select>
+          <button id="addCompare" class="primary-button" type="button">Hinzufügen</button>
+          <button id="clearCompare" class="secondary-button" type="button">Leeren</button>
+        </div>
+        <div id="compareSelection" class="chip-row"></div>
+        <div id="compareTable" class="table-wrap"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
