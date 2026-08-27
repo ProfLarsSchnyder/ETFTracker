@@ -1,0 +1,38 @@
+name: Wire ETF catalogue discovery
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/catalog_discovery.py'
+      - 'scripts/patch_catalog_discovery.py'
+      - '.github/workflows/patch-catalog-discovery.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Wire catalogue discovery
+        run: python scripts/patch_catalog_discovery.py
+      - name: Commit updater changes
+        run: |
+          if git diff --quiet -- scripts/update_market_data.py; then
+            echo "No updater changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/update_market_data.py
+          git commit -m "Use public European ETF catalogue for radar universe"
+          git pull --rebase origin main
+          git push
