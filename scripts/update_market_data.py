@@ -187,15 +187,15 @@ def discover_etfs(config, previous_payload):
             if not any(symbol.endswith(suffix) for suffix in EUROPE_SUFFIXES):
                 continue
             lower_name = name.lower()
-            if "ucits" not in lower_name:
-                continue
             if any(term in lower_name for term in EXCLUDED_DISCOVERY_TERMS):
                 continue
             normalized = normalize_name(name)
             if symbol in by_symbol or normalized in seen_names:
                 continue
             try:
-                chart(symbol, "1mo", "1d")
+                candidate_chart = chart(symbol, "1y", "1d")
+                if len(series_from_chart(candidate_chart, prefer_adjusted=True)) < 60:
+                    continue
             except Exception:
                 continue
 
