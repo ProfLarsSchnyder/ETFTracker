@@ -2,6 +2,12 @@ name: Update ETF market data
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/update_market_data.py'
+      - 'market-config.json'
+      - '.github/workflows/update-market-data.yml'
   schedule:
     - cron: '17 * * * *'
 
