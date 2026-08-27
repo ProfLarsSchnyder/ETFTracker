@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-27T18:43:22.231544+00:00",
+  "generatedAt": "2026-08-27T18:45:31.559598+00:00",
   "source": "Yahoo Finance chart/search endpoints",
   "sourceType": "keyless-free",
   "targetUniverse": 100,
   "successCount": 15,
-  "failedCount": 1,
+  "failedCount": 0,
   "curatedCount": 15,
   "autoDiscoveredCount": 0,
   "items": [
@@ -534,11 +534,5 @@
       "reason": "Etablierter positiver Trend. 3M +3.3 %, 1J +23.9 %, SMA200 +9.1 %, Volatilität 13.8 %."
     }
   ],
-  "errors": [
-    {
-      "id": "auto-0dw5-l",
-      "name": "Multi Units Luxembourg - Lyxor MSCI World Financials TR UCITS ETF",
-      "error": "Zu wenig Tagesdaten für 0DW5.L"
-    }
-  ]
+  "errors": []
 }
